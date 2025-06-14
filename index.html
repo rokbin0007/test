@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우주에서 떨어지는 운석 피하기 게임</title>
+    <title>UFO 피하기 게임</title>
     <style>
         body {
             margin: 0;
@@ -90,6 +90,9 @@
         // 운석 배열
         let meteors = [];
         
+        // 미사일 배열
+        let missiles = [];
+        
         // 별 배경
         const stars = [];
         
@@ -159,8 +162,40 @@
             ctx.shadowBlur = 0;
         }
         
-        // 운석 생성
-        function createMeteor() {
+        // 미사일 생성
+        function createMissile() {
+            missiles.push({
+                x: ufo.x,
+                y: ufo.y - 10,
+                width: 4,
+                height: 12,
+                speed: 8
+            });
+        }
+        
+        // 미사일 그리기
+        function drawMissiles() {
+            missiles.forEach(missile => {
+                // 미사일 그라디언트 (파란색 레이저)
+                const gradient = ctx.createLinearGradient(
+                    missile.x, missile.y, missile.x, missile.y + missile.height
+                );
+                gradient.addColorStop(0, '#00ffff');
+                gradient.addColorStop(0.5, '#0099ff');
+                gradient.addColorStop(1, '#0066cc');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(missile.x - missile.width/2, missile.y, missile.width, missile.height);
+                
+                // 미사일 글로우 효과
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(missile.x - missile.width/2, missile.y, missile.width, missile.height);
+                ctx.shadowBlur = 0;
+            });
+        }
             meteors.push({
                 x: Math.random() * (canvas.width - 20),
                 y: -20,
@@ -173,29 +208,114 @@
         // 운석 그리기
         function drawMeteors() {
             meteors.forEach(meteor => {
-                // 운석 그라디언트
-                const gradient = ctx.createRadialGradient(
-                    meteor.x + meteor.width/2, meteor.y + meteor.height/2, 0,
-                    meteor.x + meteor.width/2, meteor.y + meteor.height/2, meteor.width/2
-                );
-                gradient.addColorStop(0, '#ff6600');
-                gradient.addColorStop(0.5, '#ff3300');
-                gradient.addColorStop(1, '#990000');
+                ctx.save();
                 
-                ctx.fillStyle = gradient;
-                ctx.fillRect(meteor.x, meteor.y, meteor.width, meteor.height);
+                // 운석의 중심점
+                const centerX = meteor.x + meteor.width / 2;
+                const centerY = meteor.y + meteor.height / 2;
                 
-                // 운석 테두리
-                ctx.strokeStyle = '#ffff00';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(meteor.x, meteor.y, meteor.width, meteor.height);
+                // 꼬리 효과 그리기 (뒤에서부터)
+                meteor.trail.forEach((trailPoint, index) => {
+                    const alpha = (index / meteor.trail.length) * 0.6;
+                    const size = (index / meteor.trail.length) * meteor.width * 0.8;
+                    
+                    ctx.globalAlpha = alpha;
+                    const trailGradient = ctx.createRadialGradient(
+                        trailPoint.x, trailPoint.y, 0,
+                        trailPoint.x, trailPoint.y, size
+                    );
+                    trailGradient.addColorStop(0, '#ff9900');
+                    trailGradient.addColorStop(0.5, '#ff6600');
+                    trailGradient.addColorStop(1, '#ff3300');
+                    
+                    ctx.fillStyle = trailGradient;
+                    ctx.beginPath();
+                    ctx.arc(trailPoint.x, trailPoint.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
                 
-                // 불꽃 효과
-                ctx.shadowColor = '#ff3300';
-                ctx.shadowBlur = 5;
-                ctx.fillStyle = '#ff9900';
-                ctx.fillRect(meteor.x + 2, meteor.y + 2, meteor.width - 4, meteor.height - 4);
-                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+                
+                // 운석 회전 적용
+                ctx.translate(centerX, centerY);
+                ctx.rotate(meteor.rotation);
+                
+                // 운석 본체 (불규칙한 모양)
+                ctx.beginPath();
+                const points = 8;
+                for (let i = 0; i < points; i++) {
+                    const angle = (Math.PI * 2 * i) / points;
+                    const radius = (meteor.width / 2) * (0.7 + Math.random() * 0.6);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                
+                // 운석 기본 색상 (회색-갈색)
+                const meteorGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, meteor.width / 2);
+                meteorGradient.addColorStop(0, '#666666');
+                meteorGradient.addColorStop(0.6, '#444444');
+                meteorGradient.addColorStop(1, '#222222');
+                ctx.fillStyle = meteorGradient;
+                ctx.fill();
+                
+                // 운석 테두리 (어두운 색)
+                ctx.strokeStyle = '#111111';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 불타는 효과 (겉면)
+                ctx.beginPath();
+                for (let i = 0; i < points; i++) {
+                    const angle = (Math.PI * 2 * i) / points;
+                    const radius = (meteor.width / 2) * (0.6 + Math.random() * 0.4);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                
+                const fireGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, meteor.width / 3);
+                fireGradient.addColorStop(0, '#ffff00');
+                fireGradient.addColorStop(0.3, '#ff9900');
+                fireGradient.addColorStop(0.7, '#ff3300');
+                fireGradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = fireGradient;
+                ctx.fill();
+                
+                // 불꽃 파티클들
+                for (let i = 0; i < 5; i++) {
+                    const particleAngle = Math.random() * Math.PI * 2;
+                    const particleDistance = meteor.width / 4 + Math.random() * meteor.width / 2;
+                    const particleX = Math.cos(particleAngle) * particleDistance;
+                    const particleY = Math.sin(particleAngle) * particleDistance;
+                    
+                    ctx.fillStyle = Math.random() > 0.5 ? '#ffff00' : '#ff6600';
+                    ctx.fillRect(particleX - 1, particleY - 1, 2, 2);
+                }
+                
+                // 중심부 밝은 불꽃
+                const centerFlame = ctx.createRadialGradient(0, 0, 0, 0, 0, meteor.width / 4);
+                centerFlame.addColorStop(0, '#ffffff');
+                centerFlame.addColorStop(0.3, '#ffff99');
+                centerFlame.addColorStop(1, 'transparent');
+                ctx.fillStyle = centerFlame;
+                ctx.beginPath();
+                ctx.arc(0, 0, meteor.width / 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
             });
         }
         
@@ -211,8 +331,85 @@
             ctx.globalAlpha = 1;
         }
         
-        // 충돌 감지
-        function checkCollision() {
+        // 미사일과 운석 충돌 감지
+        function checkMissileCollision() {
+            missiles.forEach((missile, missileIndex) => {
+                meteors.forEach((meteor, meteorIndex) => {
+                    const meteorCenterX = meteor.x + meteor.width / 2;
+                    const meteorCenterY = meteor.y + meteor.height / 2;
+                    const distance = Math.sqrt(
+                        Math.pow(missile.x - meteorCenterX, 2) + 
+                        Math.pow(missile.y - meteorCenterY, 2)
+                    );
+                    
+                    if (distance < meteor.width / 2 + missile.width) {
+                        // 폭발 효과 생성
+                        createExplosion(meteorCenterX, meteorCenterY);
+                        
+                        // 미사일과 운석 제거
+                        missiles.splice(missileIndex, 1);
+                        meteors.splice(meteorIndex, 1);
+                    }
+                });
+            });
+        }
+        
+        // 폭발 효과 배열
+        let explosions = [];
+        
+        // 폭발 효과 생성
+        function createExplosion(x, y) {
+            explosions.push({
+                x: x,
+                y: y,
+                radius: 5,
+                maxRadius: 25,
+                alpha: 1
+            });
+        }
+        
+        // 폭발 효과 그리기
+        function drawExplosions() {
+            explosions.forEach((explosion, index) => {
+                ctx.save();
+                ctx.globalAlpha = explosion.alpha;
+                
+                // 폭발 원
+                const gradient = ctx.createRadialGradient(
+                    explosion.x, explosion.y, 0,
+                    explosion.x, explosion.y, explosion.radius
+                );
+                gradient.addColorStop(0, '#ffff00');
+                gradient.addColorStop(0.5, '#ff6600');
+                gradient.addColorStop(1, '#ff0000');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 폭발 파티클
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8;
+                    const particleX = explosion.x + Math.cos(angle) * explosion.radius;
+                    const particleY = explosion.y + Math.sin(angle) * explosion.radius;
+                    
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(particleX - 1, particleY - 1, 2, 2);
+                }
+                
+                ctx.restore();
+                
+                // 폭발 애니메이션 업데이트
+                explosion.radius += 1;
+                explosion.alpha -= 0.05;
+                
+                // 폭발 효과 제거
+                if (explosion.alpha <= 0 || explosion.radius >= explosion.maxRadius) {
+                    explosions.splice(index, 1);
+                }
+            });
+        }
             const ufoLeft = ufo.x - 18;
             const ufoRight = ufo.x + 18;
             const ufoTop = ufo.y - 8;
@@ -238,9 +435,36 @@
                     createMeteor();
                 }
                 
+                // 미사일 이동
+                missiles.forEach((missile, index) => {
+                    missile.y -= missile.speed;
+                    if (missile.y < -missile.height) {
+                        missiles.splice(index, 1);
+                    }
+                });
+                
+                // 미사일과 운석 충돌 체크
+                checkMissileCollision();
+                
                 // 운석 이동
                 meteors.forEach((meteor, index) => {
+                    // 꼬리 효과를 위한 이전 위치 저장
+                    meteor.trail.push({
+                        x: meteor.x + meteor.width / 2,
+                        y: meteor.y + meteor.height / 2
+                    });
+                    
+                    // 꼬리 길이 제한 (최대 8개 점)
+                    if (meteor.trail.length > 8) {
+                        meteor.trail.shift();
+                    }
+                    
                     meteor.y += meteor.speed;
+                    meteor.rotation += meteor.rotationSpeed;
+                    
+                    // 약간의 좌우 흔들림 효과
+                    meteor.x += Math.sin(meteor.y * 0.01) * 0.5;
+                    
                     if (meteor.y > canvas.height) {
                         meteors.splice(index, 1);
                     }
@@ -271,14 +495,19 @@
                 ctx.font = '18px Courier New';
                 ctx.fillText('스페이스바를 눌러 시작하세요', canvas.width/2, canvas.height/2);
                 ctx.fillText('(모바일: 화면 터치)', canvas.width/2, canvas.height/2 + 30);
+                ctx.fillText('스페이스바로 미사일 발사!', canvas.width/2, canvas.height/2 + 60);
                 
             } else if (gameState === 'playing') {
                 drawUFO();
+                drawMissiles();
                 drawMeteors();
+                drawExplosions();
                 
             } else if (gameState === 'gameOver') {
                 drawUFO();
+                drawMissiles();
                 drawMeteors();
+                drawExplosions();
                 
                 // 게임 오버 오버레이
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -305,6 +534,8 @@
             startTime = Date.now();
             survivalTime = 0;
             meteors = [];
+            missiles = [];
+            explosions = [];
             ufo.x = canvas.width / 2;
         }
         
@@ -316,11 +547,21 @@
         }
         
         // 키보드 이벤트
+        let lastMissileTime = 0;
+        const missileDelay = 200; // 미사일 발사 간격 (밀리초)
+        
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (gameState === 'waiting' || gameState === 'gameOver') {
                     startGame();
+                } else if (gameState === 'playing') {
+                    // 미사일 발사 (연사 제한)
+                    const currentTime = Date.now();
+                    if (currentTime - lastMissileTime > missileDelay) {
+                        createMissile();
+                        lastMissileTime = currentTime;
+                    }
                 }
             }
             
@@ -342,6 +583,15 @@
             if (gameState === 'waiting' || gameState === 'gameOver') {
                 startGame();
                 return;
+            }
+            
+            if (gameState === 'playing') {
+                // 터치로 미사일 발사
+                const currentTime = Date.now();
+                if (currentTime - lastMissileTime > missileDelay) {
+                    createMissile();
+                    lastMissileTime = currentTime;
+                }
             }
             
             touchStartX = e.touches[0].clientX;
@@ -367,6 +617,13 @@
             }
             
             if (gameState === 'playing') {
+                // 클릭으로 미사일 발사
+                const currentTime = Date.now();
+                if (currentTime - lastMissileTime > missileDelay) {
+                    createMissile();
+                    lastMissileTime = currentTime;
+                }
+                
                 const rect = canvas.getBoundingClientRect();
                 const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
                 
@@ -389,7 +646,7 @@
             keys[e.code] = false;
         });
         
-        // 연속 이동 처리
+        // 연속 이동 및 미사일 발사 처리
         function handleContinuousInput() {
             if (gameState === 'playing') {
                 if (keys['ArrowLeft'] && ufo.x > 20) {
@@ -398,6 +655,15 @@
                 if (keys['ArrowRight'] && ufo.x < canvas.width - 20) {
                     ufo.x += ufo.speed;
                 }
+                
+                // 스페이스바 연사
+                if (keys['Space']) {
+                    const currentTime = Date.now();
+                    if (currentTime - lastMissileTime > missileDelay) {
+                        createMissile();
+                        lastMissileTime = currentTime;
+                    }
+                }
             }
             requestAnimationFrame(handleContinuousInput);
         }
@@ -405,6 +671,9 @@
         // 게임 시작
         init();
         handleContinuousInput();
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
